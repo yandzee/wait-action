@@ -8,3 +8,5 @@ type WorkflowRun struct {
 	Commit CommitSpec
 	Flags  RunFlags
 }
+
+type WorkflowRuns []*WorkflowRun
