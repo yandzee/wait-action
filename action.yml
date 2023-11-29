@@ -1,0 +1,11 @@
+# action.yml
+name: 'wait-action'
+description: 'Simple action allowing to wait until some jobs done'
+inputs:
+  workflows:
+    description: 'Workflows wait conditions'
+    required: true
+    default: ''
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
