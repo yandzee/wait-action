@@ -2,6 +2,10 @@
 name: 'wait-action'
 description: 'Simple action allowing to wait until some jobs done'
 inputs:
+  poll-delay:
+    descripton: 'Delay between poll requests to Github API'
+    required: true
+    default: '10s'
   workflows:
     description: 'Workflows wait conditions'
     required: true
