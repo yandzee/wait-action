@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/go-github/v56/github"
+	"github.com/yandzee/wait-action/pkg/github"
 
 	"github.com/yandzee/wait-action/internal/config"
 	"github.com/yandzee/wait-action/internal/poller/pollerutils"
@@ -17,23 +17,26 @@ type Poller struct {
 	log *slog.Logger
 	cfg *config.Config
 
-	gh *github.Client
+	gh github.GithubClient
 }
 
-func New(log *slog.Logger, cfg *config.Config) *Poller {
-	client := github.NewClient(nil).WithAuthToken(cfg.GithubToken)
-
+func New(log *slog.Logger, cfg *config.Config, gh github.GithubClient) *Poller {
 	return &Poller{
 		log: log,
 		cfg: cfg,
-		gh:  client,
+		gh:  gh,
 	}
 }
 
 func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
+	// NOTE: Let's create so called "PollDescriptor" that is responsible for
+	// tracking progress and saying if we are done
 	desc := p.createPollDescriptor(t)
 
 	for {
+		// NOTE: Now we simply do poll iterations and on every such iteration
+		// we are trying to input some new events/data into poll descriptor
+		// regarding our progress
 		isCompleted, err := p.poll(desc)
 		if err != nil {
 			return fmt.Errorf("failed to do poll iteration: %s", err.Error())

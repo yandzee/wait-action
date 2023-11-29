@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/yandzee/wait-action/internal/config"
+	"github.com/yandzee/wait-action/internal/github_client"
 	"github.com/yandzee/wait-action/internal/poller"
 	"github.com/yandzee/wait-action/internal/tasks"
 )
@@ -21,5 +22,10 @@ func Run(ctx context.Context, log *slog.Logger) error {
 		return err
 	}
 
-	return poller.New(log, cfg).Run(ctx, workflows)
+	gh, err := github_client.New(log.WithGroup("github-client"), cfg.GithubToken)
+	if err != nil {
+		return err
+	}
+
+	return poller.New(log, cfg, gh).Run(ctx, workflows)
 }
