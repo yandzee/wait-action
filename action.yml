@@ -2,6 +2,9 @@
 name: 'wait-action'
 description: 'Simple action allowing to wait until some jobs done'
 inputs:
+  head-sha:
+    description: 'Commit hash for waiting on'
+    required: true
   poll-delay:
     descripton: 'Delay between poll requests to Github API'
     required: true

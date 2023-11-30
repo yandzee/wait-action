@@ -15,7 +15,7 @@ type Config struct {
 	PollDelay   time.Duration
 	RepoOwner   string
 	Repo        string
-	HeadRef     string
+	Head        github.CommitSpec
 	Workflows   string
 }
 
@@ -42,9 +42,13 @@ func ParseEnv() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse repository: %s", err.Error())
 	}
 
-	headRef := os.Getenv("GITHUB_HEAD_REF")
-	if len(headRef) == 0 {
-		return nil, fmt.Errorf("GITHUB_HEAD_REF is not set")
+	headSha := os.Getenv("INPUT_HEAD_SHA")
+	if len(headSha) == 0 {
+		return nil, fmt.Errorf("INPUT_HEAD_SHA is not set")
+	}
+
+	head := github.CommitSpec{
+		Sha: headSha,
 	}
 
 	workflows := os.Getenv("INPUT_WORKFLOWS")
@@ -54,7 +58,7 @@ func ParseEnv() (*Config, error) {
 		PollDelay:   pollDelay,
 		RepoOwner:   parts[0],
 		Repo:        parts[1],
-		HeadRef:     headRef,
+		Head:        head,
 		Workflows:   workflows,
 	}, nil
 }
@@ -63,15 +67,7 @@ func (c *Config) LogAttrs() []any {
 	return []any{
 		slog.Bool("token-is-set", len(c.GithubToken) > 0),
 		slog.String("poll-delay", c.PollDelay.String()),
-		slog.String("head-ref", c.HeadRef),
+		slog.String("head-sha", c.Head.Sha),
 		slog.String("workflows", c.Workflows),
-	}
-}
-
-func (c *Config) CommitSpec() github.CommitSpec {
-	// TODO: How to do it right?
-	return github.CommitSpec{
-		Sha:    "",
-		Branch: c.HeadRef,
 	}
 }

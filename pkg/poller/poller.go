@@ -76,7 +76,7 @@ func (p *Poller) poll(
 		ctx,
 		p.cfg.RepoOwner,
 		p.cfg.Repo,
-		p.cfg.CommitSpec(),
+		p.cfg.Head,
 	)
 
 	if err != nil {
