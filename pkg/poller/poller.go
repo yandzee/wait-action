@@ -83,6 +83,7 @@ func (p *Poller) poll(
 		return false, err
 	}
 
+	desc.ApplyWorkflowRuns(matcher, workflowRuns)
 	return false, nil
 }
 

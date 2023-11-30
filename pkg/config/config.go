@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -20,7 +21,12 @@ type Config struct {
 func ParseEnv() (*Config, error) {
 	ghToken := os.Getenv("GITHUB_TOKEN")
 
-	pollDelay, err := time.ParseDuration(os.Getenv("INPUT_POLL_DELAY"))
+	pollDelayStr := strings.TrimSpace(os.Getenv("INPUT_POLL_DELAY"))
+	if len(pollDelayStr) == 0 {
+		pollDelayStr = "10s"
+	}
+
+	pollDelay, err := time.ParseDuration(pollDelayStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse poll delay: %s", err.Error())
 	}
@@ -47,6 +53,14 @@ func ParseEnv() (*Config, error) {
 		Repo:        parts[1],
 		HeadRef:     headRef,
 	}, nil
+}
+
+func (c *Config) LogAttrs() []any {
+	return []any{
+		slog.Bool("token-is-set", len(c.GithubToken) > 0),
+		slog.String("poll-delay", c.PollDelay.String()),
+		slog.String("head-ref", c.HeadRef),
+	}
 }
 
 func (c *Config) CommitSpec() github.CommitSpec {

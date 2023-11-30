@@ -23,6 +23,8 @@ func Run(ctx context.Context, log *slog.Logger) error {
 		return err
 	}
 
+	log.Info("running with config", slog.Group("config", cfg.LogAttrs()...))
+
 	gh, err := github_client.New(log.WithGroup("github-client"), cfg.GithubToken)
 	if err != nil {
 		return err

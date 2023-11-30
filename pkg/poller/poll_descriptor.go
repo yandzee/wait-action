@@ -4,10 +4,16 @@ import (
 	"log/slog"
 
 	"github.com/yandzee/wait-action/pkg/github"
+	"github.com/yandzee/wait-action/pkg/tasks"
 )
 
 type PollDescriptor struct {
 	Workflows *PollingTuple[github.WorkflowRuns]
+}
+
+type PollingTuple[T any] struct {
+	Remaining T
+	Done      T
 }
 
 func NewPollDescriptor() *PollDescriptor {
@@ -19,9 +25,15 @@ func NewPollDescriptor() *PollDescriptor {
 	}
 }
 
-type PollingTuple[T any] struct {
-	Remaining T
-	Done      T
+func (pd *PollDescriptor) ApplyWorkflowRuns(
+	matcher *tasks.WorkflowsMatcher,
+	wfRuns github.WorkflowRuns,
+) {
+	for _, wfRun := range wfRuns {
+		if !matcher.Matches(wfRun.Workflow) {
+			continue
+		}
+	}
 }
 
 func (pd *PollDescriptor) LogAttrs() []any {
