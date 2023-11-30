@@ -50,7 +50,7 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 		p.log.
 			With(desc.LogAttrs()...).
 			With("delay", p.cfg.PollDelay.String()).
-			Info("Poller still waits for remaining tasks")
+			Info("waiting")
 
 		select {
 		case <-ctx.Done():
@@ -80,26 +80,26 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 	// return nil
 }
 
-func (p *Poller) poll(desc *PollDescriptor, t []tasks.WaitTask) (bool, error) {
+func (p *Poller) poll(
+	ctx context.Context,
+	desc *PollDescriptor,
+	t []tasks.WaitTask,
+) (bool, error) {
+	workflowRuns, err := p.gh.GetWorkflowRuns(
+		ctx,
+		p.cfg.RepoOwner,
+		p.cfg.Repo,
+		p.cfg.CommitSpec(),
+	)
+
+	if err != nil {
+		return false, err
+	}
+
 	return false, nil
 }
 
-// func (p *Poller) getWorkflowsFromTasks(
-// 	ctx context.Context, t []tasks.WaitTask,
-// ) (pollerutils.WorkflowsMap, *github.Workflows, error) {
-// 	repoWorkflows, _, err := p.gh.Actions.ListWorkflows(
-// 		ctx,
-// 		p.cfg.RepoOwner,
-// 		p.cfg.Repo,
-// 		&github.ListOptions{
-// 			PerPage: 100,
-// 		},
-// 	)
-//
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-//
-// 	workflowsMap := pollerutils.FilterTaskWorkflows(repoWorkflows, t)
-// 	return workflowsMap, repoWorkflows, nil
-// }
+func (p *Poller) getWorkflowsFromTasks(
+	ctx context.Context, t []tasks.WaitTask,
+) (pollerutils.WorkflowsMap, *github.Workflows, error) {
+}

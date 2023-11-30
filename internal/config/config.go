@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/yandzee/wait-action/pkg/github"
 )
 
 type Config struct {
@@ -12,6 +14,7 @@ type Config struct {
 	PollDelay   time.Duration
 	RepoOwner   string
 	Repo        string
+	HeadRef     string
 }
 
 func ParseEnv() (*Config, error) {
@@ -32,10 +35,24 @@ func ParseEnv() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse repository: %s", err.Error())
 	}
 
+	headRef := os.Getenv("GITHUB_HEAD_REF")
+	if len(headRef) == 0 {
+		return nil, fmt.Errorf("GITHUB_HEAD_REF is not set")
+	}
+
 	return &Config{
 		GithubToken: ghToken,
 		PollDelay:   pollDelay,
 		RepoOwner:   parts[0],
 		Repo:        parts[1],
+		HeadRef:     headRef,
 	}, nil
+}
+
+func (c *Config) CommitSpec() github.CommitSpec {
+	// TODO: How to do it right?
+	return github.CommitSpec{
+		Sha:    "",
+		Branch: c.HeadRef,
+	}
 }

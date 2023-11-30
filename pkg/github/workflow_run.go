@@ -3,7 +3,9 @@ package github
 type WorkflowRun struct {
 	Id   int64
 	Name string
-	Path string
+
+	WorkflowId int64
+	Workflow   *Workflow
 
 	Commit CommitSpec
 	Flags  RunFlags
