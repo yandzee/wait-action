@@ -42,9 +42,9 @@ func ParseEnv() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse repository: %s", err.Error())
 	}
 
-	headSha := os.Getenv("INPUT_HEAD_SHA")
+	headSha := os.Getenv("INPUT_HEAD-SHA")
 	if len(headSha) == 0 {
-		return nil, fmt.Errorf("INPUT_HEAD_SHA is not set")
+		return nil, fmt.Errorf("INPUT_HEAD-SHA is not set")
 	}
 
 	head := github.CommitSpec{
