@@ -1,6 +1,6 @@
 package tasks
 
-import "github.com/yandzee/wait-action/internal/utils"
+import "github.com/yandzee/wait-action/pkg/utils"
 
 type WaitTask struct {
 	Workflows []string

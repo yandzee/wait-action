@@ -6,11 +6,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/github"
-
-	"github.com/yandzee/wait-action/internal/config"
-	"github.com/yandzee/wait-action/internal/poller/pollerutils"
-	"github.com/yandzee/wait-action/internal/tasks"
+	"github.com/yandzee/wait-action/pkg/tasks"
 )
 
 type Poller struct {
@@ -37,7 +35,7 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 		// NOTE: Now we simply do poll iterations and on every such iteration
 		// we are trying to input some new events/data into poll descriptor
 		// regarding our progress
-		isCompleted, err := p.poll(desc, t)
+		isCompleted, err := p.poll(ctx, desc, t)
 		if err != nil {
 			return fmt.Errorf("poll iteration failed: %s", err.Error())
 		}
@@ -60,24 +58,6 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 		case <-time.After(p.cfg.PollDelay):
 		}
 	}
-	// watchedWorkflows, _, err := p.getWorkflowsFromTasks(ctx, t)
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// if len(watchedWorkflows) == 0 {
-	// 	return fmt.Errorf("workflows not found")
-	// }
-	//
-	// for {
-	// 	workflowsRuns, err := p.getWorkflowRunsByIds(watchedWorkflows.Keys())
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to get workflow runs: %s", err.Error())
-	// 	}
-	//
-	// }
-	//
-	// return nil
 }
 
 func (p *Poller) poll(
@@ -85,6 +65,13 @@ func (p *Poller) poll(
 	desc *PollDescriptor,
 	t []tasks.WaitTask,
 ) (bool, error) {
+	matcher := tasks.CreateWorkflowsMatcher(t)
+
+	// NOTE: If matcher is trivial, we have no demand for waiting on workflows
+	if matcher.IsTrivial() {
+		return true, nil
+	}
+
 	workflowRuns, err := p.gh.GetWorkflowRuns(
 		ctx,
 		p.cfg.RepoOwner,
@@ -99,7 +86,7 @@ func (p *Poller) poll(
 	return false, nil
 }
 
-func (p *Poller) getWorkflowsFromTasks(
-	ctx context.Context, t []tasks.WaitTask,
-) (pollerutils.WorkflowsMap, *github.Workflows, error) {
-}
+// func (p *Poller) getWorkflowsFromTasks(
+// 	ctx context.Context, t []tasks.WaitTask,
+// ) (pollerutils.WorkflowsMap, *github.Workflows, error) {
+// }

@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/yandzee/wait-action/internal/config"
+	"github.com/yandzee/wait-action/pkg/config"
+	"github.com/yandzee/wait-action/pkg/poller"
+	"github.com/yandzee/wait-action/pkg/tasks"
+
 	"github.com/yandzee/wait-action/internal/github_client"
-	"github.com/yandzee/wait-action/internal/poller"
-	"github.com/yandzee/wait-action/internal/tasks"
 )
 
 func Run(ctx context.Context, log *slog.Logger) error {

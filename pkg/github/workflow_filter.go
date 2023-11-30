@@ -11,18 +11,34 @@ func (wff *WorkflowFilter) PathMatches(p string) bool {
 		return true
 	}
 
-	if len(wff.pathsMap) == 0 {
-		wff.buildPathsMap()
-	}
+	wff.ensurePathsMap()
 
 	_, ok := wff.pathsMap[p]
 	return ok
 }
 
-func (wff *WorkflowFilter) buildPathsMap() {
+func (wff *WorkflowFilter) AddPaths(ps []string) {
+	wff.ensurePathsMap()
+
+	wff.Paths = append(wff.Paths, ps...)
+
+	for _, p := range ps {
+		wff.pathsMap[p] = struct{}{}
+	}
+}
+
+func (wff *WorkflowFilter) ensurePathsMap() {
+	if wff.pathsMap != nil {
+		return
+	}
+
 	wff.pathsMap = make(map[string]struct{})
 
 	for _, p := range wff.Paths {
 		wff.pathsMap[p] = struct{}{}
 	}
+}
+
+func (wff *WorkflowFilter) IsTrivial() bool {
+	return len(wff.Paths) == 0
 }
