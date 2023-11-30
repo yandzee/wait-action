@@ -13,7 +13,7 @@ import (
 )
 
 func TestEmpty(t *testing.T) {
-	ctx, p, desc := initPoller([]TestWorkflowRun{})
+	ctx, p, desc := initPoller([][]TestWorkflowRun{})
 	tasks := []tasks.WaitTask{}
 
 	for i := 0; i < 100; i += 1 {
@@ -33,15 +33,17 @@ func TestEmpty(t *testing.T) {
 	}
 }
 
-func TestOnAlreadyFinishedWorkflows(t *testing.T) {
+func TestOnFinishedSuccessWorkflows(t *testing.T) {
 	wfPath := ".github/mocked-workflow.yaml"
-	ctx, p, desc := initPoller([]TestWorkflowRun{
+	ctx, p, desc := initPoller([][]TestWorkflowRun{
 		{
-			WorkflowId:    1,
-			WorkflowRunId: 1,
-			Path:          wfPath,
-			IsFinished:    true,
-			IsSuccess:     true,
+			{
+				WorkflowId:    1,
+				WorkflowRunId: 1,
+				Path:          wfPath,
+				IsFinished:    true,
+				IsSuccess:     true,
+			},
 		},
 	})
 
@@ -68,7 +70,44 @@ func TestOnAlreadyFinishedWorkflows(t *testing.T) {
 	}
 }
 
-func initPoller(mockedRuns []TestWorkflowRun) (
+func TestOnFinishedFailedWorkflows(t *testing.T) {
+	wfPath := ".github/mocked-workflow.yaml"
+	ctx, p, desc := initPoller([][]TestWorkflowRun{
+		{
+			{
+				WorkflowId:    1,
+				WorkflowRunId: 1,
+				Path:          wfPath,
+				IsFinished:    true,
+				IsSuccess:     false,
+			},
+		},
+	})
+
+	tasks := []tasks.WaitTask{
+		{
+			Workflows: []string{wfPath},
+		},
+	}
+
+	for i := 0; i < 100; i += 1 {
+		isDone, hasFailures, err := p.Poll(ctx, desc, tasks)
+
+		if err != nil {
+			t.Fatalf("err is not nil: %s\n", err.Error())
+		}
+
+		if !isDone {
+			t.Fatal("poll descriptor is not done")
+		}
+
+		if !hasFailures {
+			t.Fatal("no failures reported")
+		}
+	}
+}
+
+func initPoller(mockedRuns [][]TestWorkflowRun) (
 	context.Context,
 	*poller.Poller,
 	*poller.PollDescriptor,
