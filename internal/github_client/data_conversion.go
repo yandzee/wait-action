@@ -16,14 +16,14 @@ func (gh *GithubClient) convertWorkflowRuns(
 		cwf := gh.convertWorkflowRun(wf)
 		cwf.Workflow = wfsMap[cwf.WorkflowId]
 
-		converted = append(converted, cwf)
-	}
+		if cwf.Workflow == nil {
+			gh.log.Error("workflow wasn't found for workflow run",
+				"workflow-run-id", cwf.Id,
+				"workflow-id", cwf.WorkflowId,
+			)
+		}
 
-	if len(converted) != cap(converted) {
-		gh.log.Error("workflows runs are not properly converted",
-			"nsource", cap(converted),
-			"nconverted", len(converted),
-		)
+		converted = append(converted, cwf)
 	}
 
 	return converted
@@ -74,13 +74,6 @@ func (gh *GithubClient) convertWorkflows(wfs []*ghclient.Workflow) []*github.Wor
 	for _, wf := range wfs {
 		cwf := gh.convertWorkflow(wf)
 		converted = append(converted, cwf)
-	}
-
-	if len(converted) != cap(converted) {
-		gh.log.Error("workflows are not properly converted",
-			"nsource", cap(converted),
-			"nconverted", len(converted),
-		)
 	}
 
 	return converted
