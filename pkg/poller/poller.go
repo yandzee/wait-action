@@ -35,7 +35,7 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 		// NOTE: Now we simply do poll iterations and on every such iteration
 		// we are trying to input some new events/data into poll descriptor
 		// regarding our progress
-		isCompleted, err := p.poll(ctx, desc, t)
+		isCompleted, err := p.Poll(ctx, desc, t)
 		if err != nil {
 			return fmt.Errorf("poll iteration failed: %s", err.Error())
 		}
@@ -60,7 +60,7 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 	}
 }
 
-func (p *Poller) poll(
+func (p *Poller) Poll(
 	ctx context.Context,
 	desc *PollDescriptor,
 	t []tasks.WaitTask,

@@ -22,7 +22,7 @@ type Config struct {
 func ParseEnv() (*Config, error) {
 	ghToken := os.Getenv("GITHUB_TOKEN")
 
-	pollDelayStr := strings.TrimSpace(os.Getenv("INPUT_POLL_DELAY"))
+	pollDelayStr := os.Getenv("INPUT_POLL-DELAY")
 	if len(pollDelayStr) == 0 {
 		pollDelayStr = "10s"
 	}
