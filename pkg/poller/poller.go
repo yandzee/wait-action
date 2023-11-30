@@ -84,5 +84,5 @@ func (p *Poller) poll(
 	}
 
 	desc.ApplyWorkflowRuns(matcher, workflowRuns)
-	return desc.HasRemaining(), nil
+	return !desc.HasRemaining(), nil
 }
