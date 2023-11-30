@@ -8,19 +8,21 @@ import (
 )
 
 type PollDescriptor struct {
-	Workflows *PollingTuple[github.WorkflowMap]
+	Workflows *JobState[github.WorkflowMap]
 }
 
-type PollingTuple[T any] struct {
+type JobState[T any] struct {
 	Remaining T
 	Done      T
+	Failed    T
 }
 
 func NewPollDescriptor() *PollDescriptor {
 	return &PollDescriptor{
-		Workflows: &PollingTuple[github.WorkflowMap]{
+		Workflows: &JobState[github.WorkflowMap]{
 			Remaining: make(github.WorkflowMap),
 			Done:      make(github.WorkflowMap),
+			Failed:    make(github.WorkflowMap),
 		},
 	}
 }
@@ -35,17 +37,24 @@ func (pd *PollDescriptor) ApplyWorkflowRuns(
 			continue
 		}
 
-		if wfRun.Flags.IsSuccess {
+		if !wfRun.Flags.IsFinished {
+			pd.Workflows.Remaining[wfRun.WorkflowId] = wf
+		} else if wfRun.Flags.IsSuccess {
 			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
 			pd.Workflows.Done[wfRun.WorkflowId] = wf
 		} else {
-			pd.Workflows.Remaining[wfRun.WorkflowId] = wf
+			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
+			pd.Workflows.Failed[wfRun.WorkflowId] = wf
 		}
 	}
 }
 
 func (pd *PollDescriptor) HasRemaining() bool {
 	return len(pd.Workflows.Remaining) > 0
+}
+
+func (pd *PollDescriptor) HasFailures() bool {
+	return len(pd.Workflows.Failed) > 0
 }
 
 func (pd *PollDescriptor) LogAttrs() []any {

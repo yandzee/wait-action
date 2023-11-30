@@ -35,9 +35,14 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 		// NOTE: Now we simply do poll iterations and on every such iteration
 		// we are trying to input some new events/data into poll descriptor
 		// regarding our progress
-		isCompleted, err := p.Poll(ctx, desc, t)
+		isCompleted, hasFailures, err := p.Poll(ctx, desc, t)
 		if err != nil {
 			return fmt.Errorf("poll iteration failed: %s", err.Error())
+		}
+
+		if hasFailures {
+			p.log.Info("Poller finished: some tasks are failed", desc.LogAttrs()...)
+			return nil
 		}
 
 		if isCompleted {
@@ -64,12 +69,12 @@ func (p *Poller) Poll(
 	ctx context.Context,
 	desc *PollDescriptor,
 	t []tasks.WaitTask,
-) (bool, error) {
+) (bool, bool, error) {
 	matcher := tasks.CreateWorkflowsMatcher(t)
 
 	// NOTE: If matcher is trivial, we have no demand for waiting on workflows
 	if matcher.IsTrivial() {
-		return true, nil
+		return true, false, nil
 	}
 
 	workflowRuns, err := p.gh.GetWorkflowRuns(
@@ -80,9 +85,9 @@ func (p *Poller) Poll(
 	)
 
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	desc.ApplyWorkflowRuns(matcher, workflowRuns)
-	return !desc.HasRemaining(), nil
+	return !desc.HasRemaining(), desc.HasFailures(), nil
 }
