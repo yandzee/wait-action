@@ -16,6 +16,7 @@ type Config struct {
 	RepoOwner   string
 	Repo        string
 	HeadRef     string
+	Workflows   string
 }
 
 func ParseEnv() (*Config, error) {
@@ -46,12 +47,15 @@ func ParseEnv() (*Config, error) {
 		return nil, fmt.Errorf("GITHUB_HEAD_REF is not set")
 	}
 
+	workflows := os.Getenv("INPUT_WORKFLOWS")
+
 	return &Config{
 		GithubToken: ghToken,
 		PollDelay:   pollDelay,
 		RepoOwner:   parts[0],
 		Repo:        parts[1],
 		HeadRef:     headRef,
+		Workflows:   workflows,
 	}, nil
 }
 
@@ -60,6 +64,7 @@ func (c *Config) LogAttrs() []any {
 		slog.Bool("token-is-set", len(c.GithubToken) > 0),
 		slog.String("poll-delay", c.PollDelay.String()),
 		slog.String("head-ref", c.HeadRef),
+		slog.String("workflows", c.Workflows),
 	}
 }
 

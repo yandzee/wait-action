@@ -8,7 +8,7 @@ import (
 )
 
 type PollDescriptor struct {
-	Workflows *PollingTuple[github.WorkflowRuns]
+	Workflows *PollingTuple[github.WorkflowMap]
 }
 
 type PollingTuple[T any] struct {
@@ -18,9 +18,9 @@ type PollingTuple[T any] struct {
 
 func NewPollDescriptor() *PollDescriptor {
 	return &PollDescriptor{
-		Workflows: &PollingTuple[github.WorkflowRuns]{
-			Remaining: github.WorkflowRuns{},
-			Done:      github.WorkflowRuns{},
+		Workflows: &PollingTuple[github.WorkflowMap]{
+			Remaining: make(github.WorkflowMap),
+			Done:      make(github.WorkflowMap),
 		},
 	}
 }
@@ -30,10 +30,22 @@ func (pd *PollDescriptor) ApplyWorkflowRuns(
 	wfRuns github.WorkflowRuns,
 ) {
 	for _, wfRun := range wfRuns {
-		if !matcher.Matches(wfRun.Workflow) {
+		wf := wfRun.Workflow
+		if !matcher.Matches(wf) {
 			continue
 		}
+
+		if wfRun.Flags.IsSuccess {
+			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
+			pd.Workflows.Done[wfRun.WorkflowId] = wf
+		} else {
+			pd.Workflows.Remaining[wfRun.WorkflowId] = wf
+		}
 	}
+}
+
+func (pd *PollDescriptor) HasRemaining() bool {
+	return len(pd.Workflows.Remaining) > 0
 }
 
 func (pd *PollDescriptor) LogAttrs() []any {

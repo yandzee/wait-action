@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"log/slog"
-	"os"
 
 	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/poller"
@@ -13,17 +12,17 @@ import (
 )
 
 func Run(ctx context.Context, log *slog.Logger) error {
-	workflows, err := tasks.Parse(os.Getenv("INPUT_WORKFLOWS"))
-	if err != nil {
-		return err
-	}
-
 	cfg, err := config.ParseEnv()
 	if err != nil {
 		return err
 	}
 
 	log.Info("running with config", slog.Group("config", cfg.LogAttrs()...))
+
+	workflows, err := tasks.Parse(cfg.Workflows)
+	if err != nil {
+		return err
+	}
 
 	gh, err := github_client.New(log.WithGroup("github-client"), cfg.GithubToken)
 	if err != nil {

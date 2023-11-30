@@ -84,10 +84,5 @@ func (p *Poller) poll(
 	}
 
 	desc.ApplyWorkflowRuns(matcher, workflowRuns)
-	return false, nil
+	return desc.HasRemaining(), nil
 }
-
-// func (p *Poller) getWorkflowsFromTasks(
-// 	ctx context.Context, t []tasks.WaitTask,
-// ) (pollerutils.WorkflowsMap, *github.Workflows, error) {
-// }
