@@ -11,12 +11,13 @@ import (
 )
 
 type Config struct {
-	GithubToken string
-	PollDelay   time.Duration
-	RepoOwner   string
-	Repo        string
-	Head        github.CommitSpec
-	Workflows   string
+	GithubToken    string
+	PollDelay      time.Duration
+	RepoOwner      string
+	Repo           string
+	Head           github.CommitSpec
+	Workflows      string
+	IsDebugEnabled bool
 }
 
 func ParseEnv() (*Config, error) {
@@ -52,14 +53,16 @@ func ParseEnv() (*Config, error) {
 	}
 
 	workflows := os.Getenv("INPUT_WORKFLOWS")
+	debugEnabled := os.Getenv("INPUT_DEBUG") == "true" || os.Getenv("DEBUG") == "true"
 
 	return &Config{
-		GithubToken: ghToken,
-		PollDelay:   pollDelay,
-		RepoOwner:   parts[0],
-		Repo:        parts[1],
-		Head:        head,
-		Workflows:   workflows,
+		GithubToken:    ghToken,
+		PollDelay:      pollDelay,
+		RepoOwner:      parts[0],
+		Repo:           parts[1],
+		Head:           head,
+		Workflows:      workflows,
+		IsDebugEnabled: debugEnabled,
 	}, nil
 }
 

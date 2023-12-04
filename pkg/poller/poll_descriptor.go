@@ -62,6 +62,7 @@ func (pd *PollDescriptor) LogAttrs() []any {
 		slog.Group("workflows",
 			slog.Int("remaining", len(pd.Workflows.Remaining)),
 			slog.Int("done", len(pd.Workflows.Done)),
+			slog.Int("failed", len(pd.Workflows.Failed)),
 		),
 	}
 }

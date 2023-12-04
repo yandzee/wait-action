@@ -1,6 +1,8 @@
 package github_client
 
 import (
+	"log/slog"
+
 	ghclient "github.com/google/go-github/v56/github"
 	"github.com/yandzee/wait-action/pkg/github"
 )
@@ -48,24 +50,14 @@ func (gh *GithubClient) commitSpecFromWorkflowRun(wf *ghclient.WorkflowRun) gith
 }
 
 func (gh *GithubClient) runFlagsFromWorkflowRun(wf *ghclient.WorkflowRun) github.RunFlags {
-	isFinished := true
-	isSuccess := false
+	rf := gh.runFlagsFromStatusOrConclusion(wf.GetStatus(), wf.GetConclusion())
 
-	switch wf.GetConclusion() {
-	case "pending":
-		fallthrough
-	case "waiting":
-		fallthrough
-	case "queued":
-		isFinished = false
-	case "success":
-		isSuccess = true
-	}
+	gh.log.Debug("constructing RunFlags from github workflow run",
+		slog.Group("run-flags", rf.LogAttrs()...),
+		slog.Group("gh.WorkflowRun", gh.workflowRunAttrs(wf)...),
+	)
 
-	return github.RunFlags{
-		IsFinished: isFinished,
-		IsSuccess:  isSuccess,
-	}
+	return rf
 }
 
 func (gh *GithubClient) convertWorkflows(wfs []*ghclient.Workflow) []*github.Workflow {
@@ -85,4 +77,65 @@ func (gh *GithubClient) convertWorkflow(wf *ghclient.Workflow) *github.Workflow 
 		Name: wf.GetName(),
 		Path: wf.GetPath(),
 	}
+}
+
+func (gh *GithubClient) runFlagsFromStatusOrConclusion(st, con string) github.RunFlags {
+	rf := github.RunFlags{
+		IsFinished: false,
+		IsSuccess:  false,
+	}
+
+	switch con {
+	case "success":
+		rf.IsFinished, rf.IsSuccess = true, true
+	case "action_required":
+		fallthrough
+	case "cancelled":
+		fallthrough
+	case "failure":
+		fallthrough
+	case "skipped":
+		fallthrough
+	case "completed":
+		fallthrough
+	case "timed_out":
+		rf.IsFinished, rf.IsSuccess = true, false
+	}
+
+	if rf.IsSuccess {
+		return rf
+	}
+
+	switch st {
+	case "neutral":
+		fallthrough
+	case "stale":
+		fallthrough
+	case "pending":
+		fallthrough
+	case "waiting":
+		fallthrough
+	case "requested":
+		fallthrough
+	case "in_progress":
+		fallthrough
+	case "queued":
+		rf.IsFinished, rf.IsSuccess = false, false
+	case "completed":
+		rf.IsFinished = true
+	case "action_required":
+		fallthrough
+	case "cancelled":
+		fallthrough
+	case "failure":
+		fallthrough
+	case "skipped":
+		fallthrough
+	case "timed_out":
+		rf.IsFinished, rf.IsSuccess = true, false
+	case "success":
+		rf.IsFinished, rf.IsSuccess = true, true
+	}
+
+	return rf
 }

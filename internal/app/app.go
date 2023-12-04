@@ -11,15 +11,10 @@ import (
 	"github.com/yandzee/wait-action/internal/github_client"
 )
 
-func Run(ctx context.Context, log *slog.Logger) error {
-	cfg, err := config.ParseEnv()
-	if err != nil {
-		return err
-	}
-
+func Run(ctx context.Context, log *slog.Logger, cfg *config.Config) error {
 	log.Info("running with config", slog.Group("config", cfg.LogAttrs()...))
 
-	workflows, err := tasks.Parse(cfg.Workflows)
+	waitTasks, err := tasks.Parse(cfg.Workflows)
 	if err != nil {
 		return err
 	}
@@ -29,5 +24,5 @@ func Run(ctx context.Context, log *slog.Logger) error {
 		return err
 	}
 
-	return poller.New(log, cfg, gh).Run(ctx, workflows)
+	return poller.New(log, cfg, gh).Run(ctx, waitTasks)
 }

@@ -1,5 +1,7 @@
 package github
 
+import "log/slog"
+
 type RunFlags struct {
 	IsFinished bool
 	IsSuccess  bool
@@ -16,4 +18,11 @@ func (cs *CommitSpec) IsSha() bool {
 
 func (cs *CommitSpec) IsBranch() bool {
 	return len(cs.Branch) > 0
+}
+
+func (rf *RunFlags) LogAttrs() []any {
+	return []any{
+		slog.Bool("IsFinished", rf.IsFinished),
+		slog.Bool("IsSuccess", rf.IsSuccess),
+	}
 }

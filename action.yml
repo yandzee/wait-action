@@ -13,6 +13,10 @@ inputs:
     description: 'Workflows wait conditions'
     required: true
     default: ''
+  debug:
+    descriptor: 'Flag for displaying debug logs'
+    required: false
+    default: false
 runs:
   using: 'docker'
   image: 'Dockerfile'
