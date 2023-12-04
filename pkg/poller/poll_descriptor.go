@@ -8,6 +8,7 @@ import (
 )
 
 type PollDescriptor struct {
+	log       *slog.Logger
 	Workflows *JobState[github.WorkflowMap]
 }
 
@@ -17,8 +18,9 @@ type JobState[T any] struct {
 	Failed    T
 }
 
-func NewPollDescriptor() *PollDescriptor {
+func NewPollDescriptor(log *slog.Logger) *PollDescriptor {
 	return &PollDescriptor{
+		log: log,
 		Workflows: &JobState[github.WorkflowMap]{
 			Remaining: make(github.WorkflowMap),
 			Done:      make(github.WorkflowMap),
@@ -34,17 +36,25 @@ func (pd *PollDescriptor) ApplyWorkflowRuns(
 	for _, wfRun := range wfRuns {
 		wf := wfRun.Workflow
 		if !matcher.Matches(wf) {
+			pd.log.Debug("workflow skipped by matcher", wfRun.LogAttrs()...)
 			continue
 		}
 
-		if !wfRun.Flags.IsFinished {
+		switch {
+		case !wfRun.Flags.IsFinished:
 			pd.Workflows.Remaining[wfRun.WorkflowId] = wf
-		} else if wfRun.Flags.IsSuccess {
+
+			pd.log.Info("remaining workflow run", wfRun.LogAttrs()...)
+		case wfRun.Flags.IsSuccess:
 			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
 			pd.Workflows.Done[wfRun.WorkflowId] = wf
-		} else {
+
+			pd.log.Info("workflow run successfully completed", wfRun.LogAttrs()...)
+		default:
 			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
 			pd.Workflows.Failed[wfRun.WorkflowId] = wf
+
+			pd.log.Info("workflow run failed", wfRun.LogAttrs()...)
 		}
 	}
 }

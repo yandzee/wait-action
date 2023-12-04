@@ -259,5 +259,5 @@ func initPoller(mockedRuns [][]TestWorkflowRun) (
 	ghClient := initMockedGithubClient(mockedRuns)
 	p := poller.New(slog.New(slog.NewTextHandler(io.Discard, nil)), cfg, ghClient)
 
-	return context.Background(), p, poller.NewPollDescriptor()
+	return context.Background(), p, p.CreatePollDescriptor()
 }

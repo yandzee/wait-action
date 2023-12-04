@@ -35,6 +35,7 @@ func (gh *GithubClient) convertWorkflowRun(wf *ghclient.WorkflowRun) *github.Wor
 	return &github.WorkflowRun{
 		Id:         wf.GetID(),
 		Name:       wf.GetName(),
+		HtmlURL:    wf.GetHTMLURL(),
 		WorkflowId: wf.GetWorkflowID(),
 		Workflow:   nil,
 		Commit:     gh.commitSpecFromWorkflowRun(wf),

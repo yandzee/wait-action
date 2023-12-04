@@ -29,7 +29,7 @@ func New(log *slog.Logger, cfg *config.Config, gh github.GithubClient) *Poller {
 func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 	// NOTE: Let's create so called "PollDescriptor" that is responsible for
 	// tracking progress and saying if we are done
-	desc := NewPollDescriptor()
+	desc := p.CreatePollDescriptor()
 
 	for {
 		// NOTE: Now we simply do poll iterations and on every such iteration
@@ -90,4 +90,8 @@ func (p *Poller) Poll(
 
 	desc.ApplyWorkflowRuns(matcher, workflowRuns)
 	return !desc.HasRemaining(), desc.HasFailures(), nil
+}
+
+func (p *Poller) CreatePollDescriptor() *PollDescriptor {
+	return NewPollDescriptor(p.log)
 }

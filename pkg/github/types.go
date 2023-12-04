@@ -12,6 +12,13 @@ type CommitSpec struct {
 	Sha    string
 }
 
+func (cs *CommitSpec) LogAttrs() []any {
+	return []any{
+		slog.String("branch", cs.Branch),
+		slog.String("sha", cs.Sha),
+	}
+}
+
 func (cs *CommitSpec) IsSha() bool {
 	return len(cs.Sha) > 0
 }
@@ -22,7 +29,7 @@ func (cs *CommitSpec) IsBranch() bool {
 
 func (rf *RunFlags) LogAttrs() []any {
 	return []any{
-		slog.Bool("IsFinished", rf.IsFinished),
-		slog.Bool("IsSuccess", rf.IsSuccess),
+		slog.Bool("is-finished", rf.IsFinished),
+		slog.Bool("is-success", rf.IsSuccess),
 	}
 }
