@@ -2,9 +2,10 @@ package tests
 
 import (
 	"context"
-	"io"
 	"log/slog"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/github"
@@ -22,7 +23,6 @@ func TestEmpty(t *testing.T) {
 		t,
 		[]tasks.WaitTask{{Workflows: []string{}}},
 		[][]TestWorkflowRun{},
-		map[int][]bool{},
 	)
 }
 
@@ -41,7 +41,6 @@ func TestInitiallySuccessWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {true, false}},
 	)
 }
 
@@ -60,7 +59,6 @@ func TestInitiallyFailedWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {true, true}},
 	)
 }
 
@@ -88,7 +86,6 @@ func TestNonMatchingSuccessWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{},
 	)
 }
 
@@ -116,7 +113,6 @@ func TestNonMatchingFailedWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {true, false}, 1: {true, false}},
 	)
 }
 
@@ -144,7 +140,6 @@ func TestMatchingSuccessWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {false, false}, 1: {true, false}},
 	)
 }
 
@@ -172,7 +167,6 @@ func TestMatchingFailedWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {false, false}, 1: {true, true}},
 	)
 }
 
@@ -180,84 +174,67 @@ func runTest(
 	t *testing.T,
 	wt []tasks.WaitTask,
 	wfr [][]TestWorkflowRun,
-	runExpectations map[int][]bool,
 ) {
-	ctx, p, desc := initPoller(wfr)
+	t.Parallel()
 
-	lastIsDone := !desc.HasRemaining()
-	lastHasFailures := desc.HasFailures()
-	var err error
+	ctx, cancel, p := initPoller(time.Second, wfr)
+	defer cancel()
 
-	if !lastIsDone {
-		t.Fatal("descriptor is not done initially")
-	}
+	expectedIdResults := map[int64]bool{}
+	paths := map[string]struct{}{}
 
-	if lastHasFailures {
-		t.Fatal("descriptor has failures initially")
-	}
-
-	for idx := range wfr {
-		lastIsDone, lastHasFailures, err = p.Poll(ctx, desc, wt)
-		if err != nil {
-			t.Fatalf("err is not nil: %s\n", err.Error())
-		}
-
-		expected, ok := runExpectations[idx]
-		if !ok {
-			continue
-		}
-
-		if lastIsDone != expected[0] {
-			t.Fatalf(
-				"run %d: done %v, expected: %v\n",
-				idx,
-				lastIsDone,
-				expected[0],
-			)
-		}
-
-		if lastHasFailures != expected[1] {
-			t.Fatalf(
-				"run %d: hasFailures: %v, expected: %v\n",
-				idx,
-				lastHasFailures,
-				expected[1],
-			)
+	for _, w := range wt {
+		for _, wf := range w.Workflows {
+			paths[wf] = struct{}{}
 		}
 	}
 
-	for i := 0; i < 100; i += 1 {
-		isDone, hasFailures, err := p.Poll(ctx, desc, wt)
-		if err != nil {
-			t.Fatalf("After all runs: poll crashed: %s\n", err.Error())
-		}
+	for _, runs := range wfr {
+		for _, run := range runs {
+			if _, ok := paths[run.Path]; !ok {
+				continue
+			}
 
-		if isDone != lastIsDone {
-			t.Fatalf("After all runs: isDone %v, last: %v\n", isDone, lastIsDone)
+			expectedIdResults[run.WorkflowId] = run.IsSuccess
 		}
+	}
 
-		if hasFailures != lastHasFailures {
-			t.Fatalf("After all runs: hasFailures: %v, last: %v\n", hasFailures, lastHasFailures)
-		}
+	expectedSuccess := true
+	for _, success := range expectedIdResults {
+		expectedSuccess = expectedSuccess && success
+	}
+
+	result, err := p.Run(ctx, wt)
+	if err != nil {
+		t.Fatalf("poller.Run() gives an error: %s %v\n", err.Error(), result.LogAttrs())
+	}
+
+	if result.HasFailures() && expectedSuccess {
+		t.Fatalf("success is expected, results: %v\n", expectedIdResults)
+	} else if !result.HasFailures() && !expectedSuccess {
+		t.Fatalf("failure is expected, results: %v\n", expectedIdResults)
 	}
 }
 
-func initPoller(mockedRuns [][]TestWorkflowRun) (
+func initPoller(timeout time.Duration, mockedRuns [][]TestWorkflowRun) (
 	context.Context,
-	*poller.Poller,
-	*poller.PollDescriptor,
+	context.CancelFunc,
+	*poller.Poller[*NoWaitMockClock],
 ) {
 	cfg := &config.Config{
-		GithubToken: "",
-		PollDelay:   0,
-		RepoOwner:   "owner",
-		Repo:        "repo",
-		Head:        github.CommitSpec{},
-		Workflows:   "",
+		GithubToken:    "",
+		PollDelay:      0,
+		RepoOwner:      "owner",
+		Repo:           "repo",
+		Head:           github.CommitSpec{},
+		Workflows:      "",
+		IsDebugEnabled: true,
 	}
 
 	ghClient := initMockedGithubClient(mockedRuns)
-	p := poller.New(slog.New(slog.NewTextHandler(io.Discard, nil)), cfg, ghClient)
+	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	p := poller.New(log, cfg, &NoWaitMockClock{}, ghClient)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
-	return context.Background(), p, p.CreatePollDescriptor()
+	return ctx, cancel, p
 }
