@@ -7,21 +7,15 @@ import (
 	"github.com/yandzee/wait-action/pkg/tasks"
 )
 
-type PollDescriptor struct {
+type PollResult struct {
 	log       *slog.Logger
-	Workflows *JobState[github.WorkflowMap]
+	Workflows *JobStates[github.WorkflowMap]
 }
 
-type JobState[T any] struct {
-	Remaining T
-	Done      T
-	Failed    T
-}
-
-func NewPollDescriptor(log *slog.Logger) *PollDescriptor {
-	return &PollDescriptor{
+func NewPollResult(log *slog.Logger) *PollResult {
+	return &PollResult{
 		log: log,
-		Workflows: &JobState[github.WorkflowMap]{
+		Workflows: &JobStates[github.WorkflowMap]{
 			Remaining: make(github.WorkflowMap),
 			Done:      make(github.WorkflowMap),
 			Failed:    make(github.WorkflowMap),
@@ -29,7 +23,7 @@ func NewPollDescriptor(log *slog.Logger) *PollDescriptor {
 	}
 }
 
-func (pd *PollDescriptor) ApplyWorkflowRuns(
+func (pd *PollResult) ApplyWorkflowRuns(
 	matcher *tasks.WorkflowsMatcher,
 	wfRuns github.WorkflowRuns,
 ) {
@@ -59,15 +53,15 @@ func (pd *PollDescriptor) ApplyWorkflowRuns(
 	}
 }
 
-func (pd *PollDescriptor) HasRemaining() bool {
+func (pd *PollResult) HasRemaining() bool {
 	return len(pd.Workflows.Remaining) > 0
 }
 
-func (pd *PollDescriptor) HasFailures() bool {
+func (pd *PollResult) HasFailures() bool {
 	return len(pd.Workflows.Failed) > 0
 }
 
-func (pd *PollDescriptor) LogAttrs() []any {
+func (pd *PollResult) LogAttrs() []any {
 	return []any{
 		slog.Group("workflows",
 			slog.Int("remaining", len(pd.Workflows.Remaining)),
