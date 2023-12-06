@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/yandzee/wait-action/pkg/clock"
 	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/github"
 	"github.com/yandzee/wait-action/pkg/poller"
@@ -244,7 +245,7 @@ func runTest(
 
 func initPoller(mockedRuns [][]TestWorkflowRun) (
 	context.Context,
-	*poller.Poller,
+	*poller.Poller[*clock.MockClock],
 	*poller.PollDescriptor,
 ) {
 	cfg := &config.Config{
@@ -257,7 +258,8 @@ func initPoller(mockedRuns [][]TestWorkflowRun) (
 	}
 
 	ghClient := initMockedGithubClient(mockedRuns)
-	p := poller.New(slog.New(slog.NewTextHandler(io.Discard, nil)), cfg, ghClient)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	p := poller.New(log, cfg, &clock.MockClock{}, ghClient)
 
 	return context.Background(), p, p.CreatePollDescriptor()
 }

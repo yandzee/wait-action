@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/yandzee/wait-action/pkg/clock"
 	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/poller"
 	"github.com/yandzee/wait-action/pkg/tasks"
@@ -24,5 +25,5 @@ func Run(ctx context.Context, log *slog.Logger, cfg *config.Config) error {
 		return err
 	}
 
-	return poller.New(log, cfg, gh).Run(ctx, waitTasks)
+	return poller.New(log, cfg, &clock.StdClock{}, gh).Run(ctx, waitTasks)
 }

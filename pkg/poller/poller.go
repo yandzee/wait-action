@@ -4,29 +4,36 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
+	"github.com/yandzee/wait-action/pkg/clock"
 	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/github"
 	"github.com/yandzee/wait-action/pkg/tasks"
 )
 
-type Poller struct {
-	log *slog.Logger
-	cfg *config.Config
+type Poller[C clock.Clock] struct {
+	log  *slog.Logger
+	cfg  *config.Config
+	clck C
 
 	gh github.GithubClient
 }
 
-func New(log *slog.Logger, cfg *config.Config, gh github.GithubClient) *Poller {
-	return &Poller{
-		log: log,
-		cfg: cfg,
-		gh:  gh,
+func New[C clock.Clock](
+	log *slog.Logger,
+	cfg *config.Config,
+	clck C,
+	gh github.GithubClient,
+) *Poller[C] {
+	return &Poller[C]{
+		log:  log,
+		cfg:  cfg,
+		clck: clck,
+		gh:   gh,
 	}
 }
 
-func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
+func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) error {
 	// NOTE: Let's create so called "PollDescriptor" that is responsible for
 	// tracking progress and saying if we are done
 	desc := p.CreatePollDescriptor()
@@ -60,12 +67,12 @@ func (p *Poller) Run(ctx context.Context, t []tasks.WaitTask) error {
 			p.log.Warn("Poller context Done triggered", "err", ctx.Err().Error())
 
 			return ctx.Err()
-		case <-time.After(p.cfg.PollDelay):
+		case <-p.clck.WaitChannel(p.cfg.PollDelay):
 		}
 	}
 }
 
-func (p *Poller) Poll(
+func (p *Poller[C]) Poll(
 	ctx context.Context,
 	desc *PollDescriptor,
 	t []tasks.WaitTask,
@@ -92,6 +99,6 @@ func (p *Poller) Poll(
 	return !desc.HasRemaining(), desc.HasFailures(), nil
 }
 
-func (p *Poller) CreatePollDescriptor() *PollDescriptor {
+func (p *Poller[C]) CreatePollDescriptor() *PollDescriptor {
 	return NewPollDescriptor(p.log)
 }
