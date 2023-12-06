@@ -38,7 +38,7 @@ func (pr *PollResult) ApplyWorkflowRuns(
 }
 
 func (pr *PollResult) MergeInPlace(rhs *PollResult) {
-
+	pr.Workflows.Merge(&rhs.Workflows)
 }
 
 func (pr *PollResult) HasRemaining() bool {

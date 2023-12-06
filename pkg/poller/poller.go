@@ -33,7 +33,7 @@ func New[C clock.Clock](
 	}
 }
 
-func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) error {
+func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) (*PollResult, error) {
 	result := PollResult{
 		log: p.log,
 	}
@@ -44,11 +44,15 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) error {
 		// regarding our progress
 		presult, err := p.Poll(ctx, t)
 		if err != nil {
-			return fmt.Errorf("Poll() failed: %s", err.Error())
+			return nil, fmt.Errorf("poller.Poll() failed: %s", err.Error())
 		}
 
+		// NOTE: Collecting all the result in single place
 		result.MergeInPlace(presult)
 
+		if result.HasFailures() || !result.HasRemaining() {
+			return &result, nil
+		}
 		// if hasFailures {
 		// 	p.log.Info("Poller finished: some tasks are failed", result.LogAttrs()...)
 		// 	return nil
@@ -59,16 +63,14 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) error {
 		// 	return nil
 		// }
 		//
-		// p.log.
-		// 	With(desc.LogAttrs()...).
-		// 	With("delay", p.cfg.PollDelay.String()).
-		// 	Info("waiting")
+		p.log.
+			With(result.LogAttrs()...).
+			With("delay", p.cfg.PollDelay.String()).
+			Info("waiting before next poll")
 
 		select {
 		case <-ctx.Done():
-			p.log.Warn("Poller context Done triggered", "err", ctx.Err().Error())
-
-			return ctx.Err()
+			return nil, ctx.Err()
 		case <-p.clck.WaitChannel(p.cfg.PollDelay):
 		}
 	}

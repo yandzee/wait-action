@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log/slog"
+	"os"
 
 	"github.com/yandzee/wait-action/pkg/clock"
 	"github.com/yandzee/wait-action/pkg/config"
@@ -25,5 +26,28 @@ func Run(ctx context.Context, log *slog.Logger, cfg *config.Config) error {
 		return err
 	}
 
-	return poller.New(log, cfg, &clock.StdClock{}, gh).Run(ctx, waitTasks)
+	result, err := poller.New(log, cfg, &clock.StdClock{}, gh).Run(ctx, waitTasks)
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case result.HasFailures():
+		log.
+			With(result.LogAttrs()...).
+			Error("finished: some tasks failed")
+
+		// NOTE: Terminating with error code to break Github actions run
+		os.Exit(1)
+	case result.HasRemaining():
+		log.
+			With(result.LogAttrs()...).
+			Error("poller terminated with remaining tasks not being empty")
+
+		panic("Poller has terminated prematurely")
+	default:
+		log.Info("finished: all tasks done")
+	}
+
+	return nil
 }

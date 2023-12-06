@@ -10,13 +10,13 @@ type WorkflowStates struct {
 	Done      github.WorkflowMap
 }
 
-type State int
+func (ws *WorkflowStates) HasRemaining() bool {
+	return len(ws.Remaining) > 0
+}
 
-const (
-	PendingState State = iota
-	SuccessState
-	FailedState
-)
+func (ws *WorkflowStates) HasFailures() bool {
+	return len(ws.Failed) > 0
+}
 
 func (ws *WorkflowStates) ApplyRun(run *github.WorkflowRun) State {
 	ws.ensureMaps()
@@ -41,12 +41,16 @@ func (ws *WorkflowStates) ApplyRun(run *github.WorkflowRun) State {
 	return st
 }
 
-func (ws *WorkflowStates) HasRemaining() bool {
-	return len(ws.Remaining) > 0
+func (ws *WorkflowStates) Merge(rhs *WorkflowStates) {
+	ws.mergeMap(ws.Remaining, rhs.Remaining)
+	ws.mergeMap(ws.Done, rhs.Done)
+	ws.mergeMap(ws.Failed, rhs.Failed)
 }
 
-func (ws *WorkflowStates) HasFailures() bool {
-	return len(ws.Failed) > 0
+func (ws *WorkflowStates) mergeMap(dst, src github.WorkflowMap) {
+	for id, wf := range src {
+		dst[id] = wf
+	}
 }
 
 func (ws *WorkflowStates) ensureMaps() {
@@ -61,17 +65,4 @@ func (ws *WorkflowStates) ensureMaps() {
 	if ws.Done == nil {
 		ws.Done = make(github.WorkflowMap)
 	}
-}
-
-func (s State) String() string {
-	switch s {
-	case PendingState:
-		return "pending"
-	case FailedState:
-		return "failed"
-	case SuccessState:
-		return "success"
-	}
-
-	return "unknown"
 }
