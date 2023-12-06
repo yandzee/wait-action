@@ -9,64 +9,52 @@ import (
 
 type PollResult struct {
 	log       *slog.Logger
-	Workflows *JobStates[github.WorkflowMap]
+	Workflows WorkflowStates
 }
 
 func NewPollResult(log *slog.Logger) *PollResult {
 	return &PollResult{
-		log: log,
-		Workflows: &JobStates[github.WorkflowMap]{
-			Remaining: make(github.WorkflowMap),
-			Done:      make(github.WorkflowMap),
-			Failed:    make(github.WorkflowMap),
-		},
+		log:       log,
+		Workflows: WorkflowStates{},
 	}
 }
 
-func (pd *PollResult) ApplyWorkflowRuns(
+func (pr *PollResult) ApplyWorkflowRuns(
 	matcher *tasks.WorkflowsMatcher,
-	wfRuns github.WorkflowRuns,
+	runs github.WorkflowRuns,
 ) {
-	for _, wfRun := range wfRuns {
-		wf := wfRun.Workflow
+	for _, run := range runs {
+		wf := run.Workflow
 		if !matcher.Matches(wf) {
-			pd.log.Debug("workflow skipped by matcher", wfRun.LogAttrs()...)
+			pr.log.Debug("workflow skipped by matcher", run.LogAttrs()...)
 			continue
 		}
 
-		switch {
-		case !wfRun.Flags.IsFinished:
-			pd.Workflows.Remaining[wfRun.WorkflowId] = wf
-
-			pd.log.Info("remaining workflow run", wfRun.LogAttrs()...)
-		case wfRun.Flags.IsSuccess:
-			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
-			pd.Workflows.Done[wfRun.WorkflowId] = wf
-
-			pd.log.Info("workflow run successfully completed", wfRun.LogAttrs()...)
-		default:
-			delete(pd.Workflows.Remaining, wfRun.WorkflowId)
-			pd.Workflows.Failed[wfRun.WorkflowId] = wf
-
-			pd.log.Info("workflow run failed", wfRun.LogAttrs()...)
-		}
+		state := pr.Workflows.ApplyRun(run)
+		pr.log.
+			With(run.LogAttrs()...).
+			Info("workflow run state updated", slog.String("state", state.String()))
 	}
 }
 
-func (pd *PollResult) HasRemaining() bool {
-	return len(pd.Workflows.Remaining) > 0
+func (pr *PollResult) MergeInPlace(rhs *PollResult) {
+
 }
 
-func (pd *PollResult) HasFailures() bool {
-	return len(pd.Workflows.Failed) > 0
+func (pr *PollResult) HasRemaining() bool {
+	return pr.Workflows.HasRemaining()
 }
 
-func (pd *PollResult) LogAttrs() []any {
+func (pr *PollResult) HasFailures() bool {
+	return pr.Workflows.HasFailures()
+}
+
+func (pr *PollResult) LogAttrs() []any {
 	return []any{
 		slog.Group("workflows",
-			slog.Int("remaining", len(pd.Workflows.Remaining)),
-			slog.Int("done", len(pd.Workflows.Done)),
-			slog.Int("failed", len(pd.Workflows.Failed)),
+			slog.Int("remaining", len(pr.Workflows.Remaining)),
+			slog.Int("done", len(pr.Workflows.Done)),
+			slog.Int("failed", len(pr.Workflows.Failed)),
 		),
 	}
 }

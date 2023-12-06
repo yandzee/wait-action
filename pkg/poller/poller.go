@@ -34,13 +34,13 @@ func New[C clock.Clock](
 }
 
 func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) error {
-	// NOTE: Let's create so called "PollDescriptor" that is responsible for
-	// tracking progress and saying if we are done
-	result := p.NewPollResult()
+	result := PollResult{
+		log: p.log,
+	}
 
 	for {
 		// NOTE: Now we simply do poll iterations and on every such iteration
-		// we are trying to input some new events/data into poll descriptor
+		// we are trying to merge some new events/data into PollResult
 		// regarding our progress
 		presult, err := p.Poll(ctx, t)
 		if err != nil {
@@ -96,8 +96,4 @@ func (p *Poller[C]) Poll(ctx context.Context, t []tasks.WaitTask) (*PollResult, 
 
 	result.ApplyWorkflowRuns(matcher, workflowRuns)
 	return result, nil
-}
-
-func (p *Poller[C]) NewPollResult() *PollResult {
-	return NewPollResult(p.log)
 }
