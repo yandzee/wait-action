@@ -23,7 +23,6 @@ func TestEmpty(t *testing.T) {
 		t,
 		[]tasks.WaitTask{{Workflows: []string{}}},
 		[][]TestWorkflowRun{},
-		map[int][]bool{},
 	)
 }
 
@@ -42,7 +41,6 @@ func TestInitiallySuccessWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {true, false}},
 	)
 }
 
@@ -61,7 +59,6 @@ func TestInitiallyFailedWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {true, true}},
 	)
 }
 
@@ -89,7 +86,6 @@ func TestNonMatchingSuccessWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{},
 	)
 }
 
@@ -117,7 +113,6 @@ func TestNonMatchingFailedWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {true, false}, 1: {true, false}},
 	)
 }
 
@@ -145,7 +140,6 @@ func TestMatchingSuccessWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {false, false}, 1: {true, false}},
 	)
 }
 
@@ -173,7 +167,6 @@ func TestMatchingFailedWorkflows(t *testing.T) {
 				},
 			},
 		},
-		map[int][]bool{0: {false, false}, 1: {true, true}},
 	)
 }
 
@@ -181,7 +174,6 @@ func runTest(
 	t *testing.T,
 	wt []tasks.WaitTask,
 	wfr [][]TestWorkflowRun,
-	runExpectations map[int][]bool,
 ) {
 	t.Parallel()
 
