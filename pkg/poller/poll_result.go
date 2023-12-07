@@ -33,7 +33,8 @@ func (pr *PollResult) ApplyWorkflowRuns(
 		state := pr.Workflows.ApplyRun(run)
 		pr.log.
 			With(run.LogAttrs()...).
-			Info("workflow run state updated", slog.String("state", state.String()))
+			With(slog.String("state", state.String())).
+			Info("workflow run state updated")
 	}
 }
 

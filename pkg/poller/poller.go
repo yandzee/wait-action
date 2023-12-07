@@ -42,7 +42,7 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) (*PollResult, e
 		// NOTE: Now we simply do poll iterations and on every such iteration
 		// we are trying to merge some new events/data into PollResult
 		// regarding our progress
-		presult, err := p.Poll(ctx, t)
+		presult, err := p.poll(ctx, t)
 		if err != nil {
 			return nil, fmt.Errorf("poller.Poll() failed: %s", err.Error())
 		}
@@ -53,16 +53,7 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) (*PollResult, e
 		if result.HasFailures() || !result.HasRemaining() {
 			return &result, nil
 		}
-		// if hasFailures {
-		// 	p.log.Info("Poller finished: some tasks are failed", result.LogAttrs()...)
-		// 	return nil
-		// }
-		//
-		// if isCompleted {
-		// 	p.log.Info("Poller finished: all tasks done", desc.LogAttrs()...)
-		// 	return nil
-		// }
-		//
+
 		p.log.
 			With(result.LogAttrs()...).
 			With("delay", p.cfg.PollDelay.String()).
@@ -76,7 +67,7 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) (*PollResult, e
 	}
 }
 
-func (p *Poller[C]) Poll(ctx context.Context, t []tasks.WaitTask) (*PollResult, error) {
+func (p *Poller[C]) poll(ctx context.Context, t []tasks.WaitTask) (*PollResult, error) {
 	matcher := tasks.CreateWorkflowsMatcher(t)
 	result := &PollResult{}
 

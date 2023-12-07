@@ -5,8 +5,8 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
-	"github.com/yandzee/wait-action/pkg/clock"
 	"github.com/yandzee/wait-action/pkg/config"
 	"github.com/yandzee/wait-action/pkg/github"
 	"github.com/yandzee/wait-action/pkg/poller"
@@ -183,18 +183,14 @@ func runTest(
 	wfr [][]TestWorkflowRun,
 	runExpectations map[int][]bool,
 ) {
-	ctx, p, desc := initPoller(wfr)
+	t.Parallel()
 
-	lastIsDone := !desc.HasRemaining()
-	lastHasFailures := desc.HasFailures()
-	var err error
+	ctx, cancel, p := initPoller(time.Second, wfr)
+	defer cancel()
 
-	if !lastIsDone {
-		t.Fatal("descriptor is not done initially")
-	}
-
-	if lastHasFailures {
-		t.Fatal("descriptor has failures initially")
+	result, err := p.Run(ctx, wt)
+	if err != nil {
+		t.Fatalf("poller.Run() gives an error: %s\n", err.Error())
 	}
 
 	for idx := range wfr {
@@ -243,10 +239,10 @@ func runTest(
 	}
 }
 
-func initPoller(mockedRuns [][]TestWorkflowRun) (
+func initPoller(timeout time.Duration, mockedRuns [][]TestWorkflowRun) (
 	context.Context,
-	*poller.Poller[*clock.MockClock],
-	*poller.PollDescriptor,
+	context.CancelFunc,
+	*poller.Poller[*NoWaitMockClock],
 ) {
 	cfg := &config.Config{
 		GithubToken: "",
@@ -259,7 +255,8 @@ func initPoller(mockedRuns [][]TestWorkflowRun) (
 
 	ghClient := initMockedGithubClient(mockedRuns)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	p := poller.New(log, cfg, &clock.MockClock{}, ghClient)
+	p := poller.New(log, cfg, &NoWaitMockClock{}, ghClient)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
-	return context.Background(), p, p.CreatePollDescriptor()
+	return ctx, cancel, p
 }
