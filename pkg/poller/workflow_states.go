@@ -42,9 +42,28 @@ func (ws *WorkflowStates) ApplyRun(run *github.WorkflowRun) State {
 }
 
 func (ws *WorkflowStates) Merge(rhs *WorkflowStates) {
+	ws.ensureMaps()
+
 	ws.mergeMap(ws.Remaining, rhs.Remaining)
+	ws.dropEntriesIfInMap(rhs.Remaining, ws.Done, ws.Failed)
+
 	ws.mergeMap(ws.Done, rhs.Done)
+	ws.dropEntriesIfInMap(rhs.Done, ws.Remaining, ws.Failed)
+
 	ws.mergeMap(ws.Failed, rhs.Failed)
+	ws.dropEntriesIfInMap(rhs.Failed, ws.Remaining, ws.Done)
+}
+
+func (ws *WorkflowStates) dropEntriesIfInMap(
+	m github.WorkflowMap, targets ...github.WorkflowMap,
+) {
+	for _, target := range targets {
+		for id := range target {
+			if _, ok := m[id]; ok {
+				delete(target, id)
+			}
+		}
+	}
 }
 
 func (ws *WorkflowStates) mergeMap(dst, src github.WorkflowMap) {

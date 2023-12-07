@@ -11,4 +11,3 @@ func CreateWorkflowMap(wfs []*Workflow) WorkflowMap {
 
 	return m
 }
-

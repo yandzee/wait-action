@@ -2,8 +2,8 @@ package tests
 
 import (
 	"context"
-	"io"
 	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -188,54 +188,39 @@ func runTest(
 	ctx, cancel, p := initPoller(time.Second, wfr)
 	defer cancel()
 
+	expectedIdResults := map[int64]bool{}
+	paths := map[string]struct{}{}
+
+	for _, w := range wt {
+		for _, wf := range w.Workflows {
+			paths[wf] = struct{}{}
+		}
+	}
+
+	for _, runs := range wfr {
+		for _, run := range runs {
+			if _, ok := paths[run.Path]; !ok {
+				continue
+			}
+
+			expectedIdResults[run.WorkflowId] = run.IsSuccess
+		}
+	}
+
+	expectedSuccess := true
+	for _, success := range expectedIdResults {
+		expectedSuccess = expectedSuccess && success
+	}
+
 	result, err := p.Run(ctx, wt)
 	if err != nil {
-		t.Fatalf("poller.Run() gives an error: %s\n", err.Error())
+		t.Fatalf("poller.Run() gives an error: %s %v\n", err.Error(), result.LogAttrs())
 	}
 
-	for idx := range wfr {
-		lastIsDone, lastHasFailures, err = p.Poll(ctx, desc, wt)
-		if err != nil {
-			t.Fatalf("err is not nil: %s\n", err.Error())
-		}
-
-		expected, ok := runExpectations[idx]
-		if !ok {
-			continue
-		}
-
-		if lastIsDone != expected[0] {
-			t.Fatalf(
-				"run %d: done %v, expected: %v\n",
-				idx,
-				lastIsDone,
-				expected[0],
-			)
-		}
-
-		if lastHasFailures != expected[1] {
-			t.Fatalf(
-				"run %d: hasFailures: %v, expected: %v\n",
-				idx,
-				lastHasFailures,
-				expected[1],
-			)
-		}
-	}
-
-	for i := 0; i < 100; i += 1 {
-		isDone, hasFailures, err := p.Poll(ctx, desc, wt)
-		if err != nil {
-			t.Fatalf("After all runs: poll crashed: %s\n", err.Error())
-		}
-
-		if isDone != lastIsDone {
-			t.Fatalf("After all runs: isDone %v, last: %v\n", isDone, lastIsDone)
-		}
-
-		if hasFailures != lastHasFailures {
-			t.Fatalf("After all runs: hasFailures: %v, last: %v\n", hasFailures, lastHasFailures)
-		}
+	if result.HasFailures() && expectedSuccess {
+		t.Fatalf("success is expected, results: %v\n", expectedIdResults)
+	} else if !result.HasFailures() && !expectedSuccess {
+		t.Fatalf("failure is expected, results: %v\n", expectedIdResults)
 	}
 }
 
@@ -245,16 +230,17 @@ func initPoller(timeout time.Duration, mockedRuns [][]TestWorkflowRun) (
 	*poller.Poller[*NoWaitMockClock],
 ) {
 	cfg := &config.Config{
-		GithubToken: "",
-		PollDelay:   0,
-		RepoOwner:   "owner",
-		Repo:        "repo",
-		Head:        github.CommitSpec{},
-		Workflows:   "",
+		GithubToken:    "",
+		PollDelay:      0,
+		RepoOwner:      "owner",
+		Repo:           "repo",
+		Head:           github.CommitSpec{},
+		Workflows:      "",
+		IsDebugEnabled: true,
 	}
 
 	ghClient := initMockedGithubClient(mockedRuns)
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	p := poller.New(log, cfg, &NoWaitMockClock{}, ghClient)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 

@@ -61,7 +61,7 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) (*PollResult, e
 
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return &result, ctx.Err()
 		case <-p.clck.WaitChannel(p.cfg.PollDelay):
 		}
 	}
@@ -69,7 +69,9 @@ func (p *Poller[C]) Run(ctx context.Context, t []tasks.WaitTask) (*PollResult, e
 
 func (p *Poller[C]) poll(ctx context.Context, t []tasks.WaitTask) (*PollResult, error) {
 	matcher := tasks.CreateWorkflowsMatcher(t)
-	result := &PollResult{}
+	result := &PollResult{
+		log: p.log,
+	}
 
 	// NOTE: If matcher is trivial, we have no demand for waiting on workflows
 	if matcher.IsTrivial() {

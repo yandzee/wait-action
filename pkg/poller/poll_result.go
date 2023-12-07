@@ -12,13 +12,6 @@ type PollResult struct {
 	Workflows WorkflowStates
 }
 
-func NewPollResult(log *slog.Logger) *PollResult {
-	return &PollResult{
-		log:       log,
-		Workflows: WorkflowStates{},
-	}
-}
-
 func (pr *PollResult) ApplyWorkflowRuns(
 	matcher *tasks.WorkflowsMatcher,
 	runs github.WorkflowRuns,

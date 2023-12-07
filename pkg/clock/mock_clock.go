@@ -1,6 +1,8 @@
 package clock
 
-import "time"
+import (
+	"time"
+)
 
 type MockClock struct {
 	Current int64
